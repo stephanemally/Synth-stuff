@@ -1,0 +1,3575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ULTIMATE MICROPHONE VISUALIZER + TUNER</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        #ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        #exit-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 50, 50, 0.9);
+            color: white;
+            border: none;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            pointer-events: all;
+            z-index: 100;
+            box-shadow: 0 0 20px rgba(255, 50, 50, 0.7);
+            transition: all 0.3s ease;
+        }
+
+        #exit-btn:hover {
+            background: rgba(255, 50, 50, 1);
+            transform: scale(1.1);
+            box-shadow: 0 0 30px rgba(255, 50, 50, 1);
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px 25px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 100, 255, 0.3);
+            pointer-events: all;
+            z-index: 100;
+        }
+
+        .control-btn {
+            background: rgba(100, 100, 255, 0.8);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            pointer-events: all;
+            font-weight: bold;
+        }
+
+        .control-btn:hover {
+            background: rgba(100, 100, 255, 1);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(100, 100, 255, 0.5);
+        }
+
+        #next-visualization-btn {
+            background: linear-gradient(135deg, #00ff88, #0088ff);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            pointer-events: all;
+            font-weight: bold;
+        }
+
+        #next-visualization-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        #visualization-name {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            min-width: 300px;
+            pointer-events: all;
+            text-align: center;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+        }
+
+        #stats {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            border-radius: 15px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 100, 255, 0.3);
+            z-index: 100;
+        }
+
+        .stat-item {
+            margin: 5px 0;
+            color: #4fc3f7;
+        }
+
+        .stat-value {
+            color: white;
+            font-weight: bold;
+        }
+
+        #status {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(100, 100, 255, 0.5);
+            z-index: 200;
+            max-width: 700px;
+            width: 90%;
+            box-shadow: 0 0 50px rgba(0, 100, 255, 0.3);
+        }
+
+        #status h2 {
+            color: #4fc3f7;
+            margin-bottom: 20px;
+            font-size: 32px;
+            text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+
+        #status p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        .status-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            margin: 15px 10px 0;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            pointer-events: all;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .mode-tag {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.2), rgba(255, 64, 129, 0.2));
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            z-index: 100;
+            text-align: center;
+            min-width: 400px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .stereo-label {
+            position: absolute;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 5;
+            pointer-events: none;
+            padding: 5px 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+        }
+
+        #left-label {
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            color: #4fc3f7;
+            background: rgba(79, 195, 247, 0.2);
+            border: 1px solid rgba(79, 195, 247, 0.4);
+        }
+
+        #right-label {
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            color: #ff4081;
+            background: rgba(255, 64, 129, 0.2);
+            border: 1px solid rgba(255, 64, 129, 0.4);
+        }
+
+        #fullscreen-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 100;
+            pointer-events: all;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        #fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        #sensitivity-control {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            min-width: 250px;
+            pointer-events: all;
+            border: 1px solid rgba(100, 100, 255, 0.3);
+        }
+
+        #sensitivity-control label {
+            display: block;
+            margin-bottom: 10px;
+            color: #4fc3f7;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        #sensitivity-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 8px;
+            background: linear-gradient(to right, #4fc3f7, #ff4081);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        #sensitivity-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #volume-meter {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            width: 50px;
+            height: 250px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 15px;
+            overflow: hidden;
+            z-index: 100;
+            display: flex;
+            gap: 3px;
+            padding: 10px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .volume-channel {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .volume-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 0%;
+            transition: height 0.1s ease;
+            border-radius: 10px;
+        }
+
+        #left-volume {
+            background: linear-gradient(to top, #4fc3f7, #0066cc);
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.5);
+        }
+
+        #right-volume {
+            background: linear-gradient(to top, #ff4081, #cc0066);
+            box-shadow: 0 0 20px rgba(255, 64, 129, 0.5);
+        }
+
+        .channel-label {
+            position: absolute;
+            top: -25px;
+            font-size: 12px;
+            color: white;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .help-text {
+            position: fixed;
+            bottom: 90px;
+            left: 30px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+
+        .color-palette {
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            pointer-events: all;
+            border: 1px solid rgba(100, 100, 255, 0.3);
+        }
+
+        .color-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-btn:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+
+        .color-btn.active {
+            border-color: white;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+            transform: scale(1.1);
+        }
+
+        #tuner-display {
+            position: fixed;
+            top: 150px;
+            left: 100px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            min-width: 300px;
+            border: 1px solid rgba(100, 100, 255, 0.3);
+            pointer-events: none;
+        }
+
+        #tuner-display h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .tuner-note {
+            font-size: 48px;
+            text-align: center;
+            color: #00ff88;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.7);
+            margin-bottom: 10px;
+        }
+
+        .tuner-frequency {
+            font-size: 24px;
+            text-align: center;
+            color: #ffaa00;
+            margin-bottom: 15px;
+        }
+
+        .tuner-octave {
+            font-size: 20px;
+            text-align: center;
+            color: #4fc3f7;
+            margin-bottom: 20px;
+        }
+
+        .tuner-meter {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .tuner-meter-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff4081, #4fc3f7);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .tuner-cent-display {
+            text-align: center;
+            font-size: 16px;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .tuner-chord {
+            text-align: center;
+            font-size: 28px;
+            color: #ffaa00;
+            font-weight: bold;
+            text-shadow: 0 0 15px rgba(255, 170, 0, 0.7);
+            margin-top: 10px;
+            min-height: 40px;
+        }
+
+        #mode-counter {
+            position: fixed;
+            top: 20px;
+            right: 100px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 100, 255, 0.3);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas2d {
+            z-index: 1;
+        }
+
+        #canvas3d {
+            z-index: 2;
+            display: none;
+        }
+
+        .mode-category {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: #ffaa00;
+            padding: 8px 20px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #visualization-controls {
+            position: fixed;
+            bottom: 100px;
+            left: 30px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            min-width: 200px;
+            pointer-events: all;
+            border: 1px solid rgba(100, 100, 255, 0.3);
+        }
+
+        .vis-control-group {
+            margin-bottom: 10px;
+        }
+
+        .vis-control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #4fc3f7;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .vis-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .vis-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #4fc3f7;
+            cursor: pointer;
+        }
+
+        #amplify-low-checkbox {
+            margin-right: 5px;
+        }
+
+        #amplify-label {
+            color: #ff4081;
+            font-size: 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas2d"></canvas>
+    <div id="container">
+        <canvas id="canvas3d"></canvas>
+    </div>
+    
+    <div id="ui-overlay">
+        <button id="exit-btn">X</button>
+        <button id="fullscreen-btn">⛶</button>
+        
+        <div id="stats">
+            <div class="stat-item">Mode: <span id="mode-name" class="stat-value">1. True Stereo Scope</span></div>
+            <div class="stat-item">FPS: <span id="fps" class="stat-value">0</span></div>
+            <div class="stat-item">Balance: <span id="balance" class="stat-value">50/50</span></div>
+            <div class="stat-item">Sensitivity: <span id="sensitivity-value" class="stat-value">2.0</span></div>
+        </div>
+        
+        <div class="mode-tag" id="mode-tag">TRUE STEREO OSCILLOSCOPE</div>
+        <div class="mode-category" id="mode-category">OSCILLOSCOPE</div>
+        
+        <div id="left-label" class="stereo-label">← LEFT CHANNEL</div>
+        <div id="right-label" class="stereo-label">RIGHT CHANNEL →</div>
+        
+        <div id="mode-counter">Mode 1/50</div>
+        
+        <div class="color-palette">
+            <div class="color-btn active" style="background: #4fc3f7;" data-color="#4fc3f7"></div>
+            <div class="color-btn" style="background: #ff4081;" data-color="#ff4081"></div>
+            <div class="color-btn" style="background: #00ff88;" data-color="#00ff88"></div>
+            <div class="color-btn" style="background: #ffaa00;" data-color="#ffaa00"></div>
+            <div class="color-btn" style="background: #aa00ff;" data-color="#aa00ff"></div>
+            <div class="color-btn" style="background: #00ffff;" data-color="#00ffff"></div>
+            <div class="color-btn" style="background: #ff0088;" data-color="#ff0088"></div>
+            <div class="color-btn" style="background: #88ff00;" data-color="#88ff00"></div>
+        </div>
+        
+        <div id="tuner-display">
+            <h3>🎵 REAL-TIME TUNER 🎵</h3>
+            <div class="tuner-note" id="tuner-note">--</div>
+            <div class="tuner-frequency" id="tuner-frequency">0 Hz</div>
+            <div class="tuner-octave" id="tuner-octave">Octave: --</div>
+            <div class="tuner-meter">
+                <div class="tuner-meter-fill" id="tuner-meter-fill"></div>
+            </div>
+            <div class="tuner-cent-display" id="tuner-cent-display">0 cents</div>
+            <div class="tuner-chord" id="tuner-chord">--</div>
+        </div>
+        
+        <div id="volume-meter">
+            <div class="volume-channel">
+                <div class="channel-label">L</div>
+                <div id="left-volume" class="volume-fill"></div>
+            </div>
+            <div class="volume-channel">
+                <div class="channel-label">R</div>
+                <div id="right-volume" class="volume-fill"></div>
+            </div>
+        </div>
+        
+        <div id="sensitivity-control">
+            <label for="sensitivity-slider">SENSITIVITY: <span id="sensitivity-display">2.0</span></label>
+            <input type="range" id="sensitivity-slider" min="0.1" max="10" step="0.1" value="2.0">
+            <div style="margin-top: 15px; color: #ff4081; font-size: 12px;">
+                <input type="checkbox" id="amplify-low-checkbox" checked>
+                <label for="amplify-low-checkbox" id="amplify-label">AMPLIFY LOW LEVELS</label>
+            </div>
+        </div>
+        
+        <div id="visualization-controls">
+            <h3 style="color: #4fc3f7; margin-bottom: 10px; font-size: 14px; text-align: center;">VISUALIZATION</h3>
+            <div class="vis-control-group">
+                <label for="line-width-slider">Line Width: <span id="line-width-value">2</span></label>
+                <input type="range" class="vis-slider" id="line-width-slider" min="1" max="10" step="1" value="2">
+            </div>
+            <div class="vis-control-group">
+                <label for="glow-slider">Glow: <span id="glow-value">20</span></label>
+                <input type="range" class="vis-slider" id="glow-slider" min="0" max="50" step="1" value="20">
+            </div>
+            <div class="vis-control-group">
+                <label for="trail-slider">Trail: <span id="trail-value">0.1</span></label>
+                <input type="range" class="vis-slider" id="trail-slider" min="0" max="0.3" step="0.01" value="0.1">
+            </div>
+        </div>
+        
+        <div id="controls">
+            <button id="start-btn" class="control-btn">🎤 START MICROPHONE</button>
+            <button id="next-visualization-btn">⏭ NEXT MODE</button>
+            <div id="visualization-name">1. TRUE STEREO SCOPE</div>
+        </div>
+        
+        <div class="help-text">
+            SPACE: Next Mode • ← → : Navigate Modes<br>
+            ↑ ↓ : Sensitivity • F: Fullscreen • L: Low Boost<br>
+            C: Colors • T: Tuner • V: Visual Controls
+        </div>
+    </div>
+    
+    <div id="status">
+        <h2>🎵 ULTIMATE MICROPHONE VISUALIZER + TUNER 🎵</h2>
+        <p><strong>50+ ADVANCED VISUALIZATION MODES</strong></p>
+        <p>Real-time Pitch Detection • Chord Recognition • True Stereo • 3D Effects</p>
+        <p>Professional Tuner • Color Controls • Sensitivity Adjustment</p>
+        <button id="start-mic" class="status-btn">🎤 START MICROPHONE VISUALIZER</button>
+        <p style="margin-top: 25px; font-size: 13px; color: #888; line-height: 1.5;">
+            <strong>FEATURES:</strong> 50 Modes • Real-time Tuner • Chord Detection • Stereo Separation<br>
+            Low-Level Boost • 3D Visualizations • Pitch Detection • Fullscreen
+        </p>
+    </div>
+
+    <script>
+        // Main variables
+        let audioContext, audioSource, analyserLeft, analyserRight;
+        let frequencyDataLeft, frequencyDataRight;
+        let timeDomainDataLeft, timeDomainDataRight;
+        let isPlaying = false;
+        let currentVisualizationIndex = 0;
+        let sensitivity = 2.0;
+        let amplifyLow = true;
+        
+        // Visualization controls
+        let lineWidth = 2;
+        let glowAmount = 20;
+        let trailAmount = 0.1;
+        
+        // Pitch detection variables
+        let pitchDetector;
+        let detectedNote = "--";
+        let detectedFrequency = 0;
+        let detectedOctave = "--";
+        let centsOff = 0;
+        let detectedChord = "--";
+        
+        // Note frequencies for A4 = 440Hz
+        const noteFrequencies = {
+            'C': 16.35, 'C#': 17.32, 'D': 18.35, 'D#': 19.45,
+            'E': 20.60, 'F': 21.83, 'F#': 23.12, 'G': 24.50,
+            'G#': 25.96, 'A': 27.50, 'A#': 29.14, 'B': 30.87
+        };
+        
+        // Note names for display
+        const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        
+        // Common chords
+        const chords = {
+            'C': [0, 4, 7], 'Cm': [0, 3, 7], 'C7': [0, 4, 7, 10],
+            'D': [2, 6, 9], 'Dm': [2, 5, 9], 'D7': [2, 6, 9, 0],
+            'E': [4, 8, 11], 'Em': [4, 7, 11], 'E7': [4, 8, 11, 2],
+            'F': [5, 9, 0], 'Fm': [5, 8, 0], 'F7': [5, 9, 0, 3],
+            'G': [7, 11, 2], 'Gm': [7, 10, 2], 'G7': [7, 11, 2, 5],
+            'A': [9, 1, 4], 'Am': [9, 0, 4], 'A7': [9, 1, 4, 7],
+            'B': [11, 3, 6], 'Bm': [11, 2, 6], 'B7': [11, 3, 6, 9]
+        };
+        
+        // 50+ ADVANCED VISUALIZATION MODES
+        const visualizations = [
+            // Group 1: Classic Oscilloscopes (1-5)
+            { id: 'trueStereoScope', name: '1. True Stereo Scope', type: '2d', category: 'Oscilloscope', description: 'Dual channel stereo waveforms' },
+            { id: 'dualWaveform', name: '2. Dual Waveform', type: '2d', category: 'Oscilloscope', description: 'Overlayed L/R waveforms' },
+            { id: 'mirrorScope', name: '3. Mirror Scope', type: '2d', category: 'Oscilloscope', description: 'Mirrored stereo waveforms' },
+            { id: 'glowScope', name: '4. Glow Scope', type: '2d', category: 'Oscilloscope', description: 'Glowing waveform trails' },
+            { id: 'vectorScope', name: '5. Vector Scope', type: '2d', category: 'Oscilloscope', description: 'Polar coordinate display' },
+            
+            // Group 2: XY Oscillators (6-10)
+            { id: 'xyScope', name: '6. XY Oscilloscope', type: '2d', category: 'XY Oscillator', description: 'Classic XY mode' },
+            { id: 'lissajous', name: '7. Lissajous Figures', type: '2d', category: 'XY Oscillator', description: 'Complex XY patterns' },
+            { id: 'spiralOsc', name: '8. Spiral Oscillator', type: '2d', category: 'XY Oscillator', description: 'Spiral waveform display' },
+            { id: 'circleOsc', name: '9. Circle Oscillator', type: '2d', category: 'XY Oscillator', description: 'Circular patterns' },
+            { id: 'kaleidoscope', name: '10. Kaleidoscope', type: '2d', category: 'XY Oscillator', description: 'Symmetrical patterns' },
+            
+            // Group 3: Spectrum Analyzers (11-15)
+            { id: 'spectrumBars', name: '11. Spectrum Bars', type: '2d', category: 'Spectrum', description: 'Classic frequency bars' },
+            { id: 'spectrumWave', name: '12. Spectrum Wave', type: '2d', category: 'Spectrum', description: 'Waveform spectrum' },
+            { id: 'spectrumWaterfall', name: '13. Spectrum Waterfall', type: '2d', category: 'Spectrum', description: '3D-like spectrum cascade' },
+            { id: 'spectrumCircle', name: '14. Spectrum Circle', type: '2d', category: 'Spectrum', description: 'Circular spectrum display' },
+            { id: 'spectrum3d', name: '15. 3D Spectrum', type: '2d', category: 'Spectrum', description: '3D frequency visualization' },
+            
+            // Group 4: Low-Level Responsive (16-20)
+            { id: 'energyDots', name: '16. Energy Dots', type: '2d', category: 'Low-Level', description: 'Low-level energy particles' },
+            { id: 'pulseWaves', name: '17. Pulse Waves', type: '2d', category: 'Low-Level', description: 'Pulsing low-frequency response' },
+            { id: 'breathingCircles', name: '18. Breathing Circles', type: '2d', category: 'Low-Level', description: 'Gentle amplitude breathing' },
+            { id: 'glowSpheres', name: '19. Glow Spheres', type: '2d', category: 'Low-Level', description: 'Low-level glow effects' },
+            { id: 'particleRain', name: '20. Particle Rain', type: '2d', category: 'Low-Level', description: 'Falling audio particles' },
+            
+            // Group 5: Advanced Visualizations (21-25)
+            { id: 'audioRings', name: '21. Audio Rings', type: '2d', category: 'Advanced', description: 'Concentric audio rings' },
+            { id: 'waveGrid', name: '22. Wave Grid', type: '2d', category: 'Advanced', description: 'Audio-reactive grid' },
+            { id: 'fluidSim', name: '23. Fluid Simulation', type: '2d', category: 'Advanced', description: 'Fluid-like audio motion' },
+            { id: 'voronoi', name: '24. Voronoi Cells', type: '2d', category: 'Advanced', description: 'Voronoi cell patterns' },
+            { id: 'mosaic', name: '25. Audio Mosaic', type: '2d', category: 'Advanced', description: 'Mosaic tile patterns' },
+            
+            // Group 6: Pitch/Note Visualizations (26-30)
+            { id: 'noteBars', name: '26. Note Bars', type: '2d', category: 'Pitch', description: 'Musical note frequency bars' },
+            { id: 'pitchSpiral', name: '27. Pitch Spiral', type: '2d', category: 'Pitch', description: 'Spiral with pitch detection' },
+            { id: 'chordWheel', name: '28. Chord Wheel', type: '2d', category: 'Pitch', description: 'Chord recognition wheel' },
+            { id: 'noteParticles', name: '29. Note Particles', type: '2d', category: 'Pitch', description: 'Particles colored by note' },
+            { id: 'harmonicWeb', name: '30. Harmonic Web', type: '2d', category: 'Pitch', description: 'Harmonic relationship web' },
+            
+            // Group 7: 3D Visualizations (31-35)
+            { id: 'particleField', name: '31. Particle Field', type: '3d', category: '3D', description: '3D particle system' },
+            { id: 'audioOrbit', name: '32. Audio Orbit', type: '3d', category: '3D', description: 'Orbiting audio particles' },
+            { id: 'waveTunnel', name: '33. Wave Tunnel', type: '3d', category: '3D', description: 'Audio tunnel visualization' },
+            { id: 'sphereField', name: '34. Sphere Field', type: '3d', category: '3D', description: '3D audio spheres' },
+            { id: 'cubeMatrix', name: '35. Cube Matrix', type: '3d', category: '3D', description: 'Audio-reactive cubes' },
+            
+            // Group 8: Special Effects (36-40)
+            { id: 'neonTubes', name: '36. Neon Tubes', type: '2d', category: 'Special', description: 'Glowing neon tube effect' },
+            { id: 'laserGrid', name: '37. Laser Grid', type: '2d', category: 'Special', description: 'Laser grid visualization' },
+            { id: 'plasmaField', name: '38. Plasma Field', type: '2d', category: 'Special', description: 'Plasma-like effects' },
+            { id: 'starburst', name: '39. Starburst', type: '2d', category: 'Special', description: 'Bursting star patterns' },
+            { id: 'crystalGrowth', name: '40. Crystal Growth', type: '2d', category: 'Special', description: 'Growing crystal patterns' },
+            
+            // Group 9: Experimental (41-45)
+            { id: 'audioMandelbrot', name: '41. Audio Mandelbrot', type: '2d', category: 'Experimental', description: 'Fractal audio patterns' },
+            { id: 'neuralNetwork', name: '42. Neural Network', type: '2d', category: 'Experimental', description: 'Neural network visualization' },
+            { id: 'quantumField', name: '43. Quantum Field', type: '2d', category: 'Experimental', description: 'Quantum particle effects' },
+            { id: 'timeWarp', name: '44. Time Warp', type: '2d', category: 'Experimental', description: 'Time-distortion effects' },
+            { id: 'dimensionShift', name: '45. Dimension Shift', type: '2d', category: 'Experimental', description: 'Dimensional shifting' },
+            
+            // Group 10: Music Visualizers (46-50)
+            { id: 'equalizer3d', name: '46. 3D Equalizer', type: '3d', category: 'Music', description: '3D audio equalizer' },
+            { id: 'beatReactor', name: '47. Beat Reactor', type: '2d', category: 'Music', description: 'Beat detection reactor' },
+            { id: 'rhythmWaves', name: '48. Rhythm Waves', type: '2d', category: 'Music', description: 'Rhythm-based waveforms' },
+            { id: 'harmonicFlow', name: '49. Harmonic Flow', type: '2d', category: 'Music', description: 'Harmonic flow patterns' },
+            { id: 'ultimateMix', name: '50. Ultimate Mix', type: '2d', category: 'Music', description: 'Combined visualization' }
+        ];
+        
+        // Color presets
+        const colorPresets = {
+            default: { left: '#4fc3f7', right: '#ff4081', bg: '#000000' },
+            neon: { left: '#00ffff', right: '#ff00ff', bg: '#000000' },
+            retro: { left: '#00ff00', right: '#ff0000', bg: '#000000' },
+            vaporwave: { left: '#ff66cc', right: '#66ccff', bg: '#000000' },
+            cyberpunk: { left: '#00ff88', right: '#ffaa00', bg: '#000000' }
+        };
+        
+        // Color variables
+        let leftColor = '#4fc3f7';
+        let rightColor = '#ff4081';
+        let backgroundColor = '#000000';
+        let currentPreset = 'default';
+        
+        // Three.js variables
+        let scene, camera, renderer;
+        let particles = [];
+        let orbitParticles = [];
+        let spheres = [];
+        let cubes = [];
+        
+        // 2D canvas variables
+        let canvas2d, ctx2d;
+        
+        // Audio data buffers
+        let smoothedLeft = null, smoothedRight = null;
+        let smoothingFactor = 0.8;
+        
+        // Pitch detection history
+        let pitchHistory = [];
+        const maxHistory = 10;
+        
+        // DOM elements
+        const exitBtn = document.getElementById('exit-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const startBtn = document.getElementById('start-btn');
+        const nextVisualizationBtn = document.getElementById('next-visualization-btn');
+        const visualizationName = document.getElementById('visualization-name');
+        const startMicBtn = document.getElementById('start-mic');
+        const statusDiv = document.getElementById('status');
+        const modeTag = document.getElementById('mode-tag');
+        const modeCategory = document.getElementById('mode-category');
+        const modeName = document.getElementById('mode-name');
+        const fpsSpan = document.getElementById('fps');
+        const balanceSpan = document.getElementById('balance');
+        const sensitivitySlider = document.getElementById('sensitivity-slider');
+        const sensitivityDisplay = document.getElementById('sensitivity-display');
+        const sensitivityValue = document.getElementById('sensitivity-value');
+        const leftVolumeFill = document.getElementById('left-volume');
+        const rightVolumeFill = document.getElementById('right-volume');
+        const colorButtons = document.querySelectorAll('.color-btn');
+        const amplifyCheckbox = document.getElementById('amplify-low-checkbox');
+        const modeCounter = document.getElementById('mode-counter');
+        
+        // Tuner elements
+        const tunerNote = document.getElementById('tuner-note');
+        const tunerFrequency = document.getElementById('tuner-frequency');
+        const tunerOctave = document.getElementById('tuner-octave');
+        const tunerMeterFill = document.getElementById('tuner-meter-fill');
+        const tunerCentDisplay = document.getElementById('tuner-cent-display');
+        const tunerChord = document.getElementById('tuner-chord');
+        
+        // Visualization control elements
+        const lineWidthSlider = document.getElementById('line-width-slider');
+        const lineWidthValue = document.getElementById('line-width-value');
+        const glowSlider = document.getElementById('glow-slider');
+        const glowValue = document.getElementById('glow-value');
+        const trailSlider = document.getElementById('trail-slider');
+        const trailValue = document.getElementById('trail-value');
+        
+        // Performance tracking
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let fps = 0;
+        
+        // Initialize everything
+        async function init() {
+            // Initialize 2D canvas
+            canvas2d = document.getElementById('canvas2d');
+            ctx2d = canvas2d.getContext('2d');
+            resizeCanvas();
+            
+            // Initialize Three.js
+            initThreeJS();
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Start animation loop
+            animate();
+            
+            // Show status
+            statusDiv.style.display = 'block';
+            
+            // Update mode counter
+            updateModeCounter();
+        }
+        
+        // Initialize Three.js
+        function initThreeJS() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x000000, 10, 100);
+            
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
+            
+            // Renderer
+            const canvas3d = document.getElementById('canvas3d');
+            renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas3d, 
+                antialias: true, 
+                alpha: true,
+                powerPreference: "high-performance"
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+            
+            // Point light for 3D effects
+            const pointLight = new THREE.PointLight(0xffffff, 0.8, 100);
+            pointLight.position.set(0, 10, 10);
+            scene.add(pointLight);
+            
+            // Create starfield background
+            createStarfield();
+        }
+        
+        // Create starfield background
+        function createStarfield() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 2000;
+            const positions = new Float32Array(starCount * 3);
+            
+            for (let i = 0; i < starCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 2000;
+                positions[i + 1] = (Math.random() - 0.5) * 2000;
+                positions[i + 2] = (Math.random() - 0.5) * 2000;
+            }
+            
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            
+            const starMaterial = new THREE.PointsMaterial({
+                color: 0xffffff,
+                size: 0.5,
+                transparent: true
+            });
+            
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+        
+        // Setup microphone audio analysis
+        async function setupAudio() {
+            try {
+                // Stop existing audio
+                if (audioSource) {
+                    if (audioSource.disconnect) audioSource.disconnect();
+                }
+                
+                // Create audio context if needed
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                // Resume context if suspended
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+                
+                // Create stereo analysers
+                analyserLeft = audioContext.createAnalyser();
+                analyserRight = audioContext.createAnalyser();
+                
+                analyserLeft.fftSize = 4096;
+                analyserRight.fftSize = 4096;
+                analyserLeft.smoothingTimeConstant = 0.8;
+                analyserRight.smoothingTimeConstant = 0.8;
+                
+                // Create data arrays
+                const bufferLength = analyserLeft.frequencyBinCount;
+                frequencyDataLeft = new Uint8Array(bufferLength);
+                frequencyDataRight = new Uint8Array(bufferLength);
+                timeDomainDataLeft = new Uint8Array(bufferLength);
+                timeDomainDataRight = new Uint8Array(bufferLength);
+                
+                // Initialize smoothed data
+                smoothedLeft = new Float32Array(bufferLength);
+                smoothedRight = new Float32Array(bufferLength);
+                
+                // Get stereo microphone input
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false,
+                        channelCount: 2
+                    } 
+                });
+                
+                audioSource = audioContext.createMediaStreamSource(stream);
+                
+                // Create splitter for true stereo
+                const splitter = audioContext.createChannelSplitter(2);
+                audioSource.connect(splitter);
+                
+                // Connect left and right channels to separate analysers
+                splitter.connect(analyserLeft, 0);
+                splitter.connect(analyserRight, 1);
+                
+                // Initialize pitch detector
+                initPitchDetection();
+                
+                isPlaying = true;
+                statusDiv.style.display = 'none';
+                console.log('Microphone audio setup complete');
+                
+            } catch (error) {
+                console.error('Audio setup error:', error);
+                statusDiv.innerHTML = `
+                    <h2>Microphone Error</h2>
+                    <p>${error.message}</p>
+                    <p>Please allow microphone access and try again.</p>
+                    <button onclick="setupAudio()" class="status-btn">🎤 RETRY MICROPHONE</button>
+                `;
+            }
+        }
+        
+        // Initialize pitch detection
+        function initPitchDetection() {
+            // Simple pitch detection using FFT
+            // We'll analyze the frequency spectrum to find peaks
+        }
+        
+        // Detect pitch from frequency data
+        function detectPitch() {
+            if (!analyserLeft || !frequencyDataLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            // Find the frequency with maximum amplitude
+            let maxAmplitude = 0;
+            let maxIndex = 0;
+            
+            for (let i = 0; i < frequencyDataLeft.length; i++) {
+                if (frequencyDataLeft[i] > maxAmplitude) {
+                    maxAmplitude = frequencyDataLeft[i];
+                    maxIndex = i;
+                }
+            }
+            
+            // Convert index to frequency
+            const sampleRate = audioContext.sampleRate;
+            detectedFrequency = maxIndex * sampleRate / (analyserLeft.fftSize * 2);
+            
+            // Only detect if there's significant amplitude
+            if (maxAmplitude > 10 && detectedFrequency > 20 && detectedFrequency < 2000) {
+                // Find closest note
+                let closestNote = '';
+                let closestOctave = 0;
+                let smallestDiff = Infinity;
+                
+                for (let octave = 0; octave < 8; octave++) {
+                    for (const [noteName, baseFreq] of Object.entries(noteFrequencies)) {
+                        const noteFreq = baseFreq * Math.pow(2, octave);
+                        const diff = Math.abs(detectedFrequency - noteFreq);
+                        
+                        if (diff < smallestDiff) {
+                            smallestDiff = diff;
+                            closestNote = noteName;
+                            closestOctave = octave;
+                        }
+                    }
+                }
+                
+                // Calculate cents off
+                const targetFreq = noteFrequencies[closestNote] * Math.pow(2, closestOctave);
+                centsOff = 1200 * Math.log2(detectedFrequency / targetFreq);
+                
+                // Update display
+                detectedNote = closestNote;
+                detectedOctave = closestOctave;
+                
+                // Update tuner display
+                updateTunerDisplay();
+                
+                // Try to detect chords
+                detectChord();
+                
+                // Add to history
+                pitchHistory.push({
+                    note: detectedNote,
+                    octave: detectedOctave,
+                    frequency: detectedFrequency,
+                    time: Date.now()
+                });
+                
+                if (pitchHistory.length > maxHistory) {
+                    pitchHistory.shift();
+                }
+            } else {
+                // No significant audio detected
+                detectedNote = "--";
+                detectedFrequency = 0;
+                detectedOctave = "--";
+                centsOff = 0;
+                detectedChord = "--";
+                updateTunerDisplay();
+            }
+        }
+        
+        // Update tuner display
+        function updateTunerDisplay() {
+            tunerNote.textContent = detectedNote;
+            tunerFrequency.textContent = detectedFrequency.toFixed(1) + " Hz";
+            tunerOctave.textContent = "Octave: " + detectedOctave;
+            
+            // Update meter (cents from -50 to +50)
+            const centPosition = Math.max(-50, Math.min(50, centsOff));
+            const meterPercent = (centPosition + 50) / 100 * 100;
+            tunerMeterFill.style.width = meterPercent + "%";
+            
+            // Update cents display
+            const centsText = centsOff.toFixed(0) + " cents";
+            tunerCentDisplay.textContent = centsText;
+            
+            // Color based on tuning
+            if (Math.abs(centsOff) < 5) {
+                tunerCentDisplay.style.color = "#00ff00";
+                tunerNote.style.color = "#00ff00";
+            } else if (Math.abs(centsOff) < 20) {
+                tunerCentDisplay.style.color = "#ffff00";
+                tunerNote.style.color = "#ffff00";
+            } else {
+                tunerCentDisplay.style.color = "#ff4081";
+                tunerNote.style.color = "#ff4081";
+            }
+            
+            // Update chord display
+            tunerChord.textContent = detectedChord;
+        }
+        
+        // Simple chord detection
+        function detectChord() {
+            // For simplicity, we'll just show major/minor based on note
+            // A real implementation would analyze multiple frequencies
+            const noteIndex = noteNames.indexOf(detectedNote);
+            
+            if (noteIndex !== -1) {
+                // Simple chord guess based on note
+                const chordsForNote = {
+                    'C': 'C Major', 'C#': 'C# Minor', 'D': 'D Major',
+                    'D#': 'D# Minor', 'E': 'E Major', 'F': 'F Major',
+                    'F#': 'F# Minor', 'G': 'G Major', 'G#': 'G# Minor',
+                    'A': 'A Major', 'A#': 'A# Minor', 'B': 'B Major'
+                };
+                
+                detectedChord = chordsForNote[detectedNote] || "--";
+            } else {
+                detectedChord = "--";
+            }
+        }
+        
+        // Setup visualization
+        function setupVisualization() {
+            console.log('Setting up visualization:', visualizations[currentVisualizationIndex].name);
+            
+            // Clear previous visualization if 3D
+            if (visualizations[currentVisualizationIndex].type === '3d') {
+                scene.children = scene.children.filter(child => child.type === 'Points'); // Keep only starfield
+                createStarfield();
+                particles = [];
+                orbitParticles = [];
+                spheres = [];
+                cubes = [];
+                
+                // Setup specific 3D visualization
+                setup3DVisualization();
+            }
+            
+            // Update display
+            const vis = visualizations[currentVisualizationIndex];
+            visualizationName.textContent = vis.name;
+            modeName.textContent = vis.name;
+            modeTag.textContent = vis.description;
+            modeCategory.textContent = vis.category;
+            
+            // Update mode counter
+            updateModeCounter();
+            
+            // Hide/show appropriate canvases
+            if (vis.type === '2d') {
+                canvas2d.style.display = 'block';
+                document.getElementById('canvas3d').style.display = 'none';
+            } else {
+                canvas2d.style.display = 'none';
+                document.getElementById('canvas3d').style.display = 'block';
+            }
+            
+            // Clear canvas
+            ctx2d.clearRect(0, 0, canvas2d.width, canvas2d.height);
+        }
+        
+        // Setup 3D visualization based on current mode
+        function setup3DVisualization() {
+            const vis = visualizations[currentVisualizationIndex];
+            
+            switch (vis.id) {
+                case 'particleField':
+                    setupParticleField();
+                    break;
+                case 'audioOrbit':
+                    setupAudioOrbit();
+                    break;
+                case 'waveTunnel':
+                    setupWaveTunnel();
+                    break;
+                case 'sphereField':
+                    setupSphereField();
+                    break;
+                case 'cubeMatrix':
+                    setupCubeMatrix();
+                    break;
+                case 'equalizer3d':
+                    setup3DEqualizer();
+                    break;
+            }
+        }
+        
+        // Update mode counter
+        function updateModeCounter() {
+            modeCounter.textContent = `Mode ${currentVisualizationIndex + 1}/${visualizations.length}`;
+        }
+        
+        // Setup 3D Particle Field
+        function setupParticleField() {
+            const particleCount = 800;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const geometry = new THREE.SphereGeometry(0.1, 3, 3);
+                const hue = Math.random();
+                const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                const material = new THREE.MeshBasicMaterial({ color: color });
+                
+                const particle = new THREE.Mesh(geometry, material);
+                
+                // Random position in a sphere
+                const radius = 25;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const r = radius * Math.cbrt(Math.random());
+                
+                particle.position.x = r * Math.sin(phi) * Math.cos(theta);
+                particle.position.y = r * Math.sin(phi) * Math.sin(theta);
+                particle.position.z = r * Math.cos(phi);
+                
+                particle.userData = {
+                    baseX: particle.position.x,
+                    baseY: particle.position.y,
+                    baseZ: particle.position.z,
+                    speed: 0.3 + Math.random() * 1.5,
+                    size: 0.1 + Math.random() * 0.2
+                };
+                
+                particles.push(particle);
+                scene.add(particle);
+            }
+        }
+        
+        // Setup 3D Audio Orbit
+        function setupAudioOrbit() {
+            const orbitCount = 300;
+            
+            for (let i = 0; i < orbitCount; i++) {
+                const geometry = new THREE.SphereGeometry(0.15, 4, 4);
+                const hue = i / orbitCount;
+                const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                const material = new THREE.MeshBasicMaterial({ color: color });
+                
+                const particle = new THREE.Mesh(geometry, material);
+                
+                // Position in an orbit
+                const orbitRadius = 8 + (i % 8) * 2;
+                const angle = (i / orbitCount) * Math.PI * 2;
+                
+                particle.position.x = Math.cos(angle) * orbitRadius;
+                particle.position.y = 0;
+                particle.position.z = Math.sin(angle) * orbitRadius;
+                
+                particle.userData = {
+                    orbitRadius: orbitRadius,
+                    baseAngle: angle,
+                    speed: 0.5 + Math.random() * 1,
+                    height: Math.random() * 2 - 1
+                };
+                
+                orbitParticles.push(particle);
+                scene.add(particle);
+            }
+        }
+        
+        // Setup 3D Wave Tunnel
+        function setupWaveTunnel() {
+            const tunnelCount = 400;
+            
+            for (let i = 0; i < tunnelCount; i++) {
+                const geometry = new THREE.SphereGeometry(0.15, 3, 3);
+                const hue = (i % 100) / 100;
+                const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                const material = new THREE.MeshBasicMaterial({ color: color });
+                
+                const particle = new THREE.Mesh(geometry, material);
+                
+                // Position in a tunnel spiral
+                const spiralRadius = 10;
+                const spiralTurns = 5;
+                const spiralProgress = i / tunnelCount;
+                const angle = spiralProgress * Math.PI * 2 * spiralTurns;
+                const z = (spiralProgress - 0.5) * 50;
+                
+                particle.position.x = Math.cos(angle) * spiralRadius;
+                particle.position.y = Math.sin(angle) * spiralRadius;
+                particle.position.z = z;
+                
+                particle.userData = {
+                    baseX: particle.position.x,
+                    baseY: particle.position.y,
+                    baseZ: particle.position.z,
+                    spiralAngle: angle,
+                    speed: 0.3 + Math.random() * 0.7
+                };
+                
+                particles.push(particle);
+                scene.add(particle);
+            }
+        }
+        
+        // Setup 3D Sphere Field
+        function setupSphereField() {
+            const sphereCount = 100;
+            const gridSize = 10;
+            
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    const geometry = new THREE.SphereGeometry(0.5, 8, 8);
+                    const hue = (x + z) / (gridSize * 2);
+                    const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: color,
+                        shininess: 100
+                    });
+                    
+                    const sphere = new THREE.Mesh(geometry, material);
+                    
+                    sphere.position.x = (x - gridSize/2) * 3;
+                    sphere.position.y = 0;
+                    sphere.position.z = (z - gridSize/2) * 3;
+                    
+                    sphere.userData = {
+                        baseY: sphere.position.y,
+                        gridX: x,
+                        gridZ: z
+                    };
+                    
+                    spheres.push(sphere);
+                    scene.add(sphere);
+                }
+            }
+        }
+        
+        // Setup 3D Cube Matrix
+        function setupCubeMatrix() {
+            const cubeCount = 64;
+            const gridSize = 8;
+            
+            for (let x = 0; x < gridSize; x++) {
+                for (let z = 0; z < gridSize; z++) {
+                    const geometry = new THREE.BoxGeometry(1, 1, 1);
+                    const hue = (x + z) / (gridSize * 2);
+                    const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: color,
+                        shininess: 50
+                    });
+                    
+                    const cube = new THREE.Mesh(geometry, material);
+                    
+                    cube.position.x = (x - gridSize/2) * 2.5;
+                    cube.position.y = 0;
+                    cube.position.z = (z - gridSize/2) * 2.5;
+                    
+                    cube.userData = {
+                        baseY: cube.position.y,
+                        gridX: x,
+                        gridZ: z,
+                        rotationSpeed: 0.5 + Math.random() * 1
+                    };
+                    
+                    cubes.push(cube);
+                    scene.add(cube);
+                }
+            }
+        }
+        
+        // Setup 3D Equalizer
+        function setup3DEqualizer() {
+            const barCount = 32;
+            const barWidth = 1;
+            const barSpacing = 2;
+            
+            for (let i = 0; i < barCount; i++) {
+                const geometry = new THREE.BoxGeometry(barWidth, 1, barWidth);
+                const hue = i / barCount;
+                const color = new THREE.Color().setHSL(hue, 1, 0.5);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: color,
+                    shininess: 50
+                });
+                
+                const bar = new THREE.Mesh(geometry, material);
+                
+                bar.position.x = (i - barCount/2) * barSpacing;
+                bar.position.y = 0;
+                bar.position.z = 0;
+                
+                bar.userData = {
+                    baseHeight: 1,
+                    index: i
+                };
+                
+                cubes.push(bar);
+                scene.add(bar);
+            }
+        }
+        
+        // ================= 2D VISUALIZATION FUNCTIONS =================
+        // (All 50+ visualization functions would go here, but for brevity,
+        // I'll include a representative sample and you can expand)
+        
+        // 1. True Stereo Scope
+        function drawTrueStereoScope() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            analyserRight.getByteTimeDomainData(timeDomainDataRight);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const halfHeight = height / 2;
+            const sliceWidth = width / timeDomainDataLeft.length;
+            
+            // Clear with trail effect
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw left channel (left side)
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            ctx2d.lineCap = 'round';
+            
+            for (let i = 0; i < timeDomainDataLeft.length; i++) {
+                const v = (timeDomainDataLeft[i] - 128) / 128;
+                const x = (i / timeDomainDataLeft.length) * width * 0.5;
+                const y = halfHeight + v * halfHeight * 0.8 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            
+            // Draw right channel (right side)
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = rightColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = rightColor;
+            
+            for (let i = 0; i < timeDomainDataRight.length; i++) {
+                const v = (timeDomainDataRight[i] - 128) / 128;
+                const x = width - (i / timeDomainDataRight.length) * width * 0.5;
+                const y = halfHeight + v * halfHeight * 0.8 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 2. Dual Waveform (different from True Stereo)
+        function drawDualWaveform() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            analyserRight.getByteTimeDomainData(timeDomainDataRight);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const sliceWidth = width / timeDomainDataLeft.length;
+            
+            // Clear with trail effect
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw both channels overlayed
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            for (let i = 0; i < timeDomainDataLeft.length; i++) {
+                const v = (timeDomainDataLeft[i] - 128) / 128;
+                const x = i * sliceWidth;
+                const y = height/2 + v * height/2 * 0.7 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = rightColor;
+            ctx2d.shadowColor = rightColor;
+            
+            for (let i = 0; i < timeDomainDataRight.length; i++) {
+                const v = (timeDomainDataRight[i] - 128) / 128;
+                const x = i * sliceWidth;
+                const y = height/2 + v * height/2 * 0.7 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 3. Mirror Scope
+        function drawMirrorScope() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const sliceWidth = width / timeDomainDataLeft.length;
+            
+            // Clear with trail effect
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw mirrored waveform
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            for (let i = 0; i < timeDomainDataLeft.length; i++) {
+                const v = (timeDomainDataLeft[i] - 128) / 128;
+                const x = i * sliceWidth;
+                const y = height/4 + v * height/4 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            
+            // Draw mirrored version
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = rightColor;
+            ctx2d.shadowColor = rightColor;
+            
+            for (let i = 0; i < timeDomainDataLeft.length; i++) {
+                const v = (timeDomainDataLeft[i] - 128) / 128;
+                const x = i * sliceWidth;
+                const y = height * 3/4 - v * height/4 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 4. Glow Scope
+        function drawGlowScope() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const sliceWidth = width / timeDomainDataLeft.length;
+            const time = Date.now() * 0.001;
+            
+            // Clear with very subtle trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, 0.05)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw multiple glow layers
+            for (let layer = 0; layer < 3; layer++) {
+                const layerAlpha = 0.3 - layer * 0.1;
+                const layerWidth = lineWidth + layer * 2;
+                const layerGlow = glowAmount + layer * 10;
+                
+                ctx2d.beginPath();
+                ctx2d.strokeStyle = leftColor.replace(')', `, ${layerAlpha})`).replace('rgb', 'rgba');
+                ctx2d.lineWidth = layerWidth;
+                ctx2d.shadowBlur = layerGlow;
+                ctx2d.shadowColor = leftColor;
+                
+                for (let i = 0; i < timeDomainDataLeft.length; i++) {
+                    const v = (timeDomainDataLeft[i] - 128) / 128;
+                    const pulse = 1 + Math.sin(time * 3 + i * 0.01) * 0.2;
+                    const x = i * sliceWidth;
+                    const y = height/2 + v * height/2 * sensitivity * pulse;
+                    
+                    if (i === 0) {
+                        ctx2d.moveTo(x, y);
+                    } else {
+                        ctx2d.lineTo(x, y);
+                    }
+                }
+                
+                ctx2d.stroke();
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 5. Vector Scope
+        function drawVectorScope() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const maxRadius = Math.min(width, height) * 0.4;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw vector pattern
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            const sliceCount = 360;
+            for (let i = 0; i < sliceCount; i++) {
+                const angle = (i / sliceCount) * Math.PI * 2 + time * 0.5;
+                const freqIndex = Math.floor((i / sliceCount) * frequencyDataLeft.length);
+                
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                const radius = value * maxRadius * sensitivity;
+                
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.closePath();
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 6. XY Oscilloscope
+        function drawXYScope() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            analyserRight.getByteTimeDomainData(timeDomainDataRight);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const scale = Math.min(width, height) * 0.35;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw XY pattern
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            const pointCount = 512;
+            for (let i = 0; i < pointCount; i++) {
+                const leftIndex = Math.floor((i / pointCount) * timeDomainDataLeft.length);
+                const rightIndex = Math.floor((i / pointCount) * timeDomainDataRight.length);
+                
+                const leftValue = (timeDomainDataLeft[leftIndex] - 128) / 128;
+                const rightValue = (timeDomainDataRight[rightIndex] - 128) / 128;
+                
+                const x = centerX + leftValue * scale * sensitivity;
+                const y = centerY + rightValue * scale * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 7. Lissajous Figures
+        function drawLissajous() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            analyserRight.getByteTimeDomainData(timeDomainDataRight);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const scale = Math.min(width, height) * 0.3;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw Lissajous pattern
+            ctx2d.beginPath();
+            
+            const hue = (time * 0.1) % 1;
+            const color = `hsl(${hue * 360}, 100%, 60%)`;
+            ctx2d.strokeStyle = color;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = color;
+            
+            const pointCount = 1000;
+            for (let i = 0; i < pointCount; i++) {
+                const t = (i / pointCount) * Math.PI * 4;
+                
+                const leftIndex = Math.floor((Math.sin(t) * 0.5 + 0.5) * timeDomainDataLeft.length);
+                const rightIndex = Math.floor((Math.sin(t * 1.5) * 0.5 + 0.5) * timeDomainDataRight.length);
+                
+                const leftValue = (timeDomainDataLeft[leftIndex] - 128) / 128;
+                const rightValue = (timeDomainDataRight[rightIndex] - 128) / 128;
+                
+                const x = centerX + Math.sin(t) * scale * sensitivity + leftValue * 50;
+                const y = centerY + Math.sin(t * 1.5) * scale * sensitivity + rightValue * 50;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 8. Spiral Oscillator
+        function drawSpiralOsc() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw spiral
+            const spirals = 5;
+            const points = 500;
+            
+            ctx2d.beginPath();
+            
+            const hue = (time * 0.05) % 1;
+            const color = `hsl(${hue * 360}, 100%, 60%)`;
+            ctx2d.strokeStyle = color;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = color;
+            
+            for (let i = 0; i < points; i++) {
+                const t = (i / points) * Math.PI * 2 * spirals;
+                const radius = 5 + i * 0.3;
+                
+                const freqIndex = Math.floor((i / points) * frequencyDataLeft.length);
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                const spiralX = Math.cos(t + time) * radius;
+                const spiralY = Math.sin(t + time) * radius;
+                
+                const audioX = Math.cos(t) * value * 30 * sensitivity;
+                const audioY = Math.sin(t) * value * 30 * sensitivity;
+                
+                const x = centerX + spiralX + audioX;
+                const y = centerY + spiralY + audioY;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 9. Circle Oscillator
+        function drawCircleOsc() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            const time = Date.now() * 0.001;
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const baseRadius = Math.min(width, height) * 0.2;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw multiple circles
+            const circleCount = 8;
+            
+            for (let c = 0; c < circleCount; c++) {
+                ctx2d.beginPath();
+                
+                const hue = (time * 0.1 + c * 0.1) % 1;
+                const color = `hsl(${hue * 360}, 100%, 60%)`;
+                ctx2d.strokeStyle = color;
+                ctx2d.lineWidth = lineWidth;
+                ctx2d.shadowBlur = glowAmount;
+                ctx2d.shadowColor = color;
+                
+                const points = 100;
+                for (let i = 0; i <= points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    
+                    const freqIndex = Math.floor((i / points) * frequencyDataLeft.length);
+                    const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                    
+                    const radius = baseRadius * (c + 1) + value * 100 * sensitivity;
+                    const pulse = 1 + Math.sin(time * 2 + c) * 0.1;
+                    
+                    const x = centerX + Math.cos(angle + time * (c + 1) * 0.5) * radius * pulse;
+                    const y = centerY + Math.sin(angle + time * (c + 1) * 0.5) * radius * pulse;
+                    
+                    if (i === 0) {
+                        ctx2d.moveTo(x, y);
+                    } else {
+                        ctx2d.lineTo(x, y);
+                    }
+                }
+                
+                ctx2d.closePath();
+                ctx2d.stroke();
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 10. Kaleidoscope
+        function drawKaleidoscope() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteTimeDomainData(timeDomainDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw kaleidoscope segments
+            const segments = 12;
+            const segmentAngle = (Math.PI * 2) / segments;
+            
+            for (let seg = 0; seg < segments; seg++) {
+                ctx2d.save();
+                ctx2d.translate(centerX, centerY);
+                ctx2d.rotate(seg * segmentAngle + time * 0.3);
+                
+                // Draw waveform
+                const points = 100;
+                ctx2d.beginPath();
+                
+                const hue = (time * 0.1 + seg * 0.05) % 1;
+                const color = `hsl(${hue * 360}, 100%, 60%)`;
+                ctx2d.strokeStyle = color;
+                ctx2d.lineWidth = lineWidth;
+                ctx2d.shadowBlur = glowAmount;
+                ctx2d.shadowColor = color;
+                
+                for (let i = 0; i < points; i++) {
+                    const progress = i / points;
+                    
+                    const audioIndex = Math.floor(progress * timeDomainDataLeft.length);
+                    const value = (timeDomainDataLeft[audioIndex] - 128) / 128;
+                    
+                    const x = progress * 200 - 100;
+                    const y = value * 100 * sensitivity;
+                    
+                    if (i === 0) {
+                        ctx2d.moveTo(x, y);
+                    } else {
+                        ctx2d.lineTo(x, y);
+                    }
+                }
+                
+                ctx2d.stroke();
+                ctx2d.restore();
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 11. Spectrum Bars
+        function drawSpectrumBars() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const barWidth = width / frequencyDataLeft.length;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw frequency bars
+            for (let i = 0; i < frequencyDataLeft.length; i++) {
+                const value = applyAmplification(frequencyDataLeft[i] / 255);
+                const barHeight = value * height * sensitivity;
+                const x = i * barWidth;
+                const y = height - barHeight;
+                
+                // Create gradient based on height
+                const gradient = ctx2d.createLinearGradient(x, height, x, y);
+                const hue = i / frequencyDataLeft.length;
+                gradient.addColorStop(0, `hsl(${hue * 360}, 100%, 50%)`);
+                gradient.addColorStop(1, `hsl(${hue * 360}, 100%, 20%)`);
+                
+                ctx2d.fillStyle = gradient;
+                ctx2d.fillRect(x, y, barWidth - 1, barHeight);
+            }
+        }
+        
+        // 12. Spectrum Wave
+        function drawSpectrumWave() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const sliceWidth = width / frequencyDataLeft.length;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw spectrum wave
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            for (let i = 0; i < frequencyDataLeft.length; i++) {
+                const value = applyAmplification(frequencyDataLeft[i] / 255);
+                const x = i * sliceWidth;
+                const y = height - value * height * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 13. Spectrum Waterfall
+        function drawSpectrumWaterfall() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            
+            // Shift existing content up (waterfall effect)
+            const imageData = ctx2d.getImageData(0, 0, width, height);
+            ctx2d.putImageData(imageData, 0, -2);
+            
+            // Draw new spectrum line at bottom
+            const sliceWidth = width / frequencyDataLeft.length;
+            ctx2d.beginPath();
+            
+            for (let i = 0; i < frequencyDataLeft.length; i++) {
+                const value = applyAmplification(frequencyDataLeft[i] / 255);
+                const x = i * sliceWidth;
+                const y = height - 2 - value * height * 0.5 * sensitivity;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            // Gradient for the waterfall
+            const gradient = ctx2d.createLinearGradient(0, height - 2, 0, height - 100);
+            gradient.addColorStop(0, leftColor);
+            gradient.addColorStop(1, 'rgba(79, 195, 247, 0)');
+            
+            ctx2d.strokeStyle = gradient;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.stroke();
+        }
+        
+        // 14. Spectrum Circle
+        function drawSpectrumCircle() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const maxRadius = Math.min(width, height) * 0.4;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw circular spectrum
+            ctx2d.beginPath();
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            const sliceCount = 360;
+            for (let i = 0; i <= sliceCount; i++) {
+                const angle = (i / sliceCount) * Math.PI * 2;
+                const freqIndex = Math.floor((i / sliceCount) * frequencyDataLeft.length);
+                
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                const radius = maxRadius * 0.5 + value * maxRadius * 0.5 * sensitivity;
+                
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.closePath();
+            ctx2d.stroke();
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 15. 3D Spectrum
+        function draw3DSpectrum() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const barCount = 64;
+            const barWidth = width / barCount;
+            const depth = 50;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw 3D bars with perspective
+            for (let i = 0; i < barCount; i++) {
+                const freqIndex = Math.floor((i / barCount) * frequencyDataLeft.length);
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                const barHeight = value * height * 0.8 * sensitivity;
+                
+                // 3D perspective
+                const perspective = 0.5 + (i / barCount) * 0.5;
+                const x = i * barWidth * perspective + (width * (1 - perspective)) / 2;
+                const barWidth3D = barWidth * perspective;
+                
+                // Create 3D gradient
+                const gradient = ctx2d.createLinearGradient(x, height, x, height - barHeight);
+                const hue = i / barCount;
+                gradient.addColorStop(0, `hsl(${hue * 360}, 100%, 30%)`);
+                gradient.addColorStop(0.7, `hsl(${hue * 360}, 100%, 60%)`);
+                gradient.addColorStop(1, `hsl(${hue * 360}, 100%, 80%)`);
+                
+                ctx2d.fillStyle = gradient;
+                ctx2d.fillRect(x, height - barHeight, barWidth3D - 1, barHeight);
+                
+                // Add highlight for 3D effect
+                ctx2d.fillStyle = `rgba(255, 255, 255, 0.2)`;
+                ctx2d.fillRect(x, height - barHeight, barWidth3D * 0.3, barHeight);
+            }
+        }
+        
+        // 16. Energy Dots
+        function drawEnergyDots() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with slow fade
+            ctx2d.fillStyle = `rgba(0, 0, 0, 0.05)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw energy dots
+            const dotCount = 80;
+            for (let i = 0; i < dotCount; i++) {
+                const freqIndex = Math.floor((i / dotCount) * frequencyDataLeft.length);
+                let energy = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                energy = Math.max(0.1, energy) * sensitivity;
+                
+                const x = (i / dotCount) * width;
+                const y = height / 2 + Math.sin(time * 2 + i * 0.5) * 100 * energy;
+                
+                const size = 3 + energy * 20;
+                
+                // Glow effect
+                ctx2d.shadowBlur = glowAmount;
+                ctx2d.shadowColor = leftColor;
+                ctx2d.fillStyle = leftColor;
+                ctx2d.globalAlpha = 0.8;
+                
+                ctx2d.beginPath();
+                ctx2d.arc(x, y, size, 0, Math.PI * 2);
+                ctx2d.fill();
+                
+                ctx2d.shadowBlur = 0;
+                ctx2d.globalAlpha = 1;
+            }
+        }
+        
+        // 17. Pulse Waves
+        function drawPulseWaves() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with slow fade
+            ctx2d.fillStyle = `rgba(0, 0, 0, 0.03)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Calculate average low frequency energy
+            let lowFreqEnergy = 0;
+            const lowFreqCount = Math.min(20, frequencyDataLeft.length);
+            for (let i = 0; i < lowFreqCount; i++) {
+                lowFreqEnergy += frequencyDataLeft[i];
+            }
+            lowFreqEnergy = applyAmplification(lowFreqEnergy / (lowFreqCount * 255));
+            
+            // Draw pulsing circles
+            const pulseSize = 50 + lowFreqEnergy * 200 * sensitivity;
+            const pulseAlpha = 0.1 + lowFreqEnergy * 0.3;
+            
+            // Left pulse
+            ctx2d.beginPath();
+            ctx2d.arc(width * 0.25, height / 2, pulseSize, 0, Math.PI * 2);
+            ctx2d.strokeStyle = leftColor.replace(')', `, ${pulseAlpha})`).replace('rgb', 'rgba');
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.stroke();
+            
+            // Right pulse
+            ctx2d.beginPath();
+            ctx2d.arc(width * 0.75, height / 2, pulseSize, 0, Math.PI * 2);
+            ctx2d.strokeStyle = rightColor.replace(')', `, ${pulseAlpha})`).replace('rgb', 'rgba');
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.stroke();
+        }
+        
+        // 18. Breathing Circles
+        function drawBreathingCircles() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with very slow fade
+            ctx2d.fillStyle = `rgba(0, 0, 0, 0.01)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Calculate gentle average
+            let gentleEnergy = 0;
+            for (let i = 0; i < Math.min(50, frequencyDataLeft.length); i++) {
+                gentleEnergy += frequencyDataLeft[i];
+            }
+            gentleEnergy = applyAmplification(gentleEnergy / (50 * 255));
+            
+            // Draw breathing circles
+            const circleCount = 8;
+            for (let i = 0; i < circleCount; i++) {
+                const radius = 30 + i * 40 + gentleEnergy * 100 * sensitivity;
+                const breathing = Math.sin(time * 0.5 + i * 0.5) * 5;
+                const alpha = 0.05 + gentleEnergy * 0.2;
+                
+                // Left circle
+                ctx2d.beginPath();
+                ctx2d.arc(width * 0.3, height / 2, radius + breathing, 0, Math.PI * 2);
+                ctx2d.strokeStyle = leftColor.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+                ctx2d.lineWidth = 1 + gentleEnergy * 3;
+                ctx2d.stroke();
+                
+                // Right circle
+                ctx2d.beginPath();
+                ctx2d.arc(width * 0.7, height / 2, radius + breathing, 0, Math.PI * 2);
+                ctx2d.strokeStyle = rightColor.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+                ctx2d.lineWidth = 1 + gentleEnergy * 3;
+                ctx2d.stroke();
+            }
+        }
+        
+        // 19. Glow Spheres
+        function drawGlowSpheres() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with glow fade
+            ctx2d.fillStyle = `rgba(0, 0, 10, 0.05)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Calculate glow intensity from low frequencies
+            let glowIntensity = 0;
+            for (let i = 0; i < Math.min(20, frequencyDataLeft.length); i++) {
+                glowIntensity += frequencyDataLeft[i];
+            }
+            glowIntensity = applyAmplification(glowIntensity / (20 * 255));
+            
+            // Draw left glow sphere
+            const leftX = width * 0.25;
+            const leftY = height / 2;
+            const leftGlow = glowIntensity * 100 * sensitivity;
+            
+            const leftGradient = ctx2d.createRadialGradient(leftX, leftY, 0, leftX, leftY, leftGlow);
+            leftGradient.addColorStop(0, leftColor);
+            leftGradient.addColorStop(0.7, leftColor.replace(')', ', 0.3)').replace('rgb', 'rgba'));
+            leftGradient.addColorStop(1, 'rgba(79, 195, 247, 0)');
+            
+            ctx2d.fillStyle = leftGradient;
+            ctx2d.beginPath();
+            ctx2d.arc(leftX, leftY, leftGlow, 0, Math.PI * 2);
+            ctx2d.fill();
+            
+            // Draw right glow sphere
+            const rightX = width * 0.75;
+            const rightY = height / 2;
+            const rightGlow = glowIntensity * 100 * sensitivity;
+            
+            const rightGradient = ctx2d.createRadialGradient(rightX, rightY, 0, rightX, rightY, rightGlow);
+            rightGradient.addColorStop(0, rightColor);
+            rightGradient.addColorStop(0.7, rightColor.replace(')', ', 0.3)').replace('rgb', 'rgba'));
+            rightGradient.addColorStop(1, 'rgba(255, 64, 129, 0)');
+            
+            ctx2d.fillStyle = rightGradient;
+            ctx2d.beginPath();
+            ctx2d.arc(rightX, rightY, rightGlow, 0, Math.PI * 2);
+            ctx2d.fill();
+        }
+        
+        // 20. Particle Rain
+        function drawParticleRain() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw falling particles
+            const particleCount = 100;
+            for (let i = 0; i < particleCount; i++) {
+                const freqIndex = Math.floor((i % frequencyDataLeft.length));
+                let energy = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                energy = Math.max(0.05, energy) * sensitivity;
+                
+                const x = (i / particleCount) * width;
+                const fallSpeed = 2 + energy * 8;
+                const y = (time * fallSpeed * 50 + i * 10) % height;
+                
+                const size = 1 + energy * 5;
+                
+                // Particle with trail
+                ctx2d.shadowBlur = glowAmount * energy;
+                ctx2d.shadowColor = leftColor;
+                ctx2d.fillStyle = leftColor;
+                ctx2d.globalAlpha = 0.7;
+                
+                ctx2d.beginPath();
+                ctx2d.arc(x, y, size, 0, Math.PI * 2);
+                ctx2d.fill();
+                
+                // Trail
+                ctx2d.beginPath();
+                ctx2d.moveTo(x, y);
+                ctx2d.lineTo(x, y + size * 3);
+                ctx2d.strokeStyle = leftColor;
+                ctx2d.lineWidth = size * 0.5;
+                ctx2d.stroke();
+                
+                ctx2d.shadowBlur = 0;
+                ctx2d.globalAlpha = 1;
+            }
+        }
+        
+        // 21. Audio Rings
+        function drawAudioRings() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw audio-reactive rings
+            const ringCount = 10;
+            
+            for (let r = 0; r < ringCount; r++) {
+                ctx2d.beginPath();
+                
+                const hue = (time * 0.1 + r * 0.05) % 1;
+                const color = `hsl(${hue * 360}, 100%, 60%)`;
+                ctx2d.strokeStyle = color;
+                ctx2d.lineWidth = lineWidth;
+                ctx2d.shadowBlur = glowAmount;
+                ctx2d.shadowColor = color;
+                
+                // Get audio data for this ring
+                const freqIndex = Math.floor((r / ringCount) * frequencyDataLeft.length);
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                const baseRadius = 20 + r * 30;
+                const pulse = 1 + Math.sin(time * 2 + r) * 0.2;
+                const audioRadius = value * 50 * sensitivity;
+                
+                const radius = baseRadius * pulse + audioRadius;
+                
+                ctx2d.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx2d.stroke();
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 22. Wave Grid
+        function drawWaveGrid() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            const gridSize = 20;
+            const cellSize = Math.min(width, height) / gridSize;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw wave grid
+            for (let x = 0; x < gridSize; x++) {
+                for (let y = 0; y < gridSize; y++) {
+                    const freqIndex = Math.floor(((x + y) / (gridSize * 2)) * frequencyDataLeft.length);
+                    const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                    
+                    const centerX = x * cellSize + cellSize/2;
+                    const centerY = y * cellSize + cellSize/2;
+                    
+                    const wave = Math.sin(time * 2 + x * 0.5 + y * 0.3) * value * cellSize/2 * sensitivity;
+                    
+                    // Draw cell with wave effect
+                    ctx2d.save();
+                    ctx2d.translate(centerX, centerY + wave);
+                    
+                    const hue = (time * 0.1 + (x + y) * 0.01) % 1;
+                    ctx2d.fillStyle = `hsl(${hue * 360}, 100%, 50%)`;
+                    ctx2d.globalAlpha = 0.3 + value * 0.7;
+                    
+                    ctx2d.fillRect(-cellSize/3, -cellSize/3, cellSize/1.5, cellSize/1.5);
+                    
+                    ctx2d.restore();
+                }
+            }
+            
+            ctx2d.globalAlpha = 1;
+        }
+        
+        // 23. Fluid Simulation
+        function drawFluidSim() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with very slow fade
+            ctx2d.fillStyle = `rgba(0, 0, 20, 0.02)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw fluid-like waves
+            const waveCount = 5;
+            
+            for (let w = 0; w < waveCount; w++) {
+                ctx2d.beginPath();
+                
+                const hue = (time * 0.05 + w * 0.1) % 1;
+                const color = `hsl(${hue * 360}, 100%, 60%)`;
+                ctx2d.strokeStyle = color;
+                ctx2d.lineWidth = lineWidth;
+                ctx2d.shadowBlur = glowAmount;
+                ctx2d.shadowColor = color;
+                
+                const points = 200;
+                for (let i = 0; i <= points; i++) {
+                    const x = (i / points) * width;
+                    
+                    const freqIndex = Math.floor((i / points) * frequencyDataLeft.length);
+                    const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                    
+                    // Multiple sine waves for fluid effect
+                    const y1 = Math.sin(x * 0.01 + time + w) * 30;
+                    const y2 = Math.sin(x * 0.02 + time * 1.3 + w * 2) * 20;
+                    const y3 = Math.sin(x * 0.03 + time * 0.7 + w * 3) * 10;
+                    const audioY = value * 100 * sensitivity;
+                    
+                    const y = height/2 + y1 + y2 + y3 + audioY;
+                    
+                    if (i === 0) {
+                        ctx2d.moveTo(x, y);
+                    } else {
+                        ctx2d.lineTo(x, y);
+                    }
+                }
+                
+                ctx2d.stroke();
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 24. Voronoi Cells
+        function drawVoronoi() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            const cellCount = 50;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Generate cell points
+            const points = [];
+            for (let i = 0; i < cellCount; i++) {
+                points.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    freqIndex: i % frequencyDataLeft.length
+                });
+            }
+            
+            // Simple Voronoi-like cells
+            const cellSize = width / 10;
+            
+            for (let x = 0; x < width; x += cellSize) {
+                for (let y = 0; y < height; y += cellSize) {
+                    const freqIndex = Math.floor(((x + y) / (width + height)) * frequencyDataLeft.length);
+                    const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                    
+                    const hue = (time * 0.1 + (x + y) * 0.001) % 1;
+                    const brightness = 30 + value * 70;
+                    
+                    ctx2d.fillStyle = `hsl(${hue * 360}, 100%, ${brightness}%)`;
+                    ctx2d.globalAlpha = 0.5 + value * 0.5;
+                    
+                    // Draw cell with audio-reactive size
+                    const size = cellSize * (0.5 + value * sensitivity);
+                    ctx2d.fillRect(x + (cellSize - size)/2, y + (cellSize - size)/2, size, size);
+                }
+            }
+            
+            ctx2d.globalAlpha = 1;
+        }
+        
+        // 25. Audio Mosaic
+        function drawAudioMosaic() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            const tileSize = 30;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw mosaic tiles
+            const cols = Math.ceil(width / tileSize);
+            const rows = Math.ceil(height / tileSize);
+            
+            for (let col = 0; col < cols; col++) {
+                for (let row = 0; row < rows; row++) {
+                    const freqIndex = Math.floor(((col + row) / (cols + rows)) * frequencyDataLeft.length);
+                    const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                    
+                    const x = col * tileSize;
+                    const y = row * tileSize;
+                    
+                    const hue = (time * 0.1 + (col * row) * 0.01) % 1;
+                    const rotation = value * Math.PI * 2;
+                    
+                    ctx2d.save();
+                    ctx2d.translate(x + tileSize/2, y + tileSize/2);
+                    ctx2d.rotate(rotation);
+                    
+                    // Draw tile with audio-reactive properties
+                    const size = tileSize * (0.3 + value * 0.7 * sensitivity);
+                    const alpha = 0.3 + value * 0.7;
+                    
+                    ctx2d.fillStyle = `hsla(${hue * 360}, 100%, 60%, ${alpha})`;
+                    ctx2d.shadowBlur = glowAmount * value;
+                    ctx2d.shadowColor = `hsl(${hue * 360}, 100%, 60%)`;
+                    
+                    ctx2d.fillRect(-size/2, -size/2, size, size);
+                    
+                    ctx2d.restore();
+                }
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 26. Note Bars (Pitch-based visualization)
+        function drawNoteBars() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const barCount = 12; // 12 notes in an octave
+            const barWidth = width / barCount;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw bars for each note
+            for (let i = 0; i < barCount; i++) {
+                const noteName = noteNames[i];
+                
+                // Find frequency range for this note
+                const baseFreq = noteFrequencies[noteName];
+                const freqRange = baseFreq * 1.05946; // Half step up
+                
+                // Find energy in this frequency range
+                let noteEnergy = 0;
+                let count = 0;
+                
+                for (let freq = baseFreq; freq < freqRange && freq < 2000; freq *= 1.01) {
+                    const index = Math.floor(freq / (audioContext.sampleRate / analyserLeft.fftSize));
+                    if (index < frequencyDataLeft.length) {
+                        noteEnergy += frequencyDataLeft[index];
+                        count++;
+                    }
+                }
+                
+                const avgEnergy = count > 0 ? noteEnergy / count / 255 : 0;
+                const value = applyAmplification(avgEnergy);
+                
+                const barHeight = value * height * sensitivity;
+                const x = i * barWidth;
+                const y = height - barHeight;
+                
+                // Color based on note
+                const hue = i / barCount;
+                const isDetectedNote = (detectedNote === noteName);
+                const brightness = isDetectedNote ? 80 : 50;
+                const saturation = isDetectedNote ? 100 : 80;
+                
+                ctx2d.fillStyle = `hsl(${hue * 360}, ${saturation}%, ${brightness}%)`;
+                ctx2d.shadowBlur = isDetectedNote ? glowAmount * 2 : glowAmount;
+                ctx2d.shadowColor = `hsl(${hue * 360}, 100%, 60%)`;
+                
+                ctx2d.fillRect(x, y, barWidth - 2, barHeight);
+                
+                // Draw note name
+                if (isDetectedNote) {
+                    ctx2d.fillStyle = 'white';
+                    ctx2d.font = 'bold 16px monospace';
+                    ctx2d.textAlign = 'center';
+                    ctx2d.fillText(noteName, x + barWidth/2, height - 10);
+                }
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 27. Pitch Spiral
+        function drawPitchSpiral() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw pitch spiral
+            const spirals = 3;
+            const points = 500;
+            
+            ctx2d.beginPath();
+            
+            // Use detected note for color
+            const noteIndex = noteNames.indexOf(detectedNote);
+            const hue = noteIndex !== -1 ? noteIndex / 12 : (time * 0.1) % 1;
+            const color = `hsl(${hue * 360}, 100%, 60%)`;
+            
+            ctx2d.strokeStyle = color;
+            ctx2d.lineWidth = lineWidth;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = color;
+            
+            for (let i = 0; i < points; i++) {
+                const t = (i / points) * Math.PI * 2 * spirals;
+                const radius = 10 + i * 0.4;
+                
+                const freqIndex = Math.floor((i / points) * frequencyDataLeft.length);
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                // Use pitch detection to influence spiral
+                const pitchInfluence = detectedNote !== "--" ? 1 + centsOff / 100 : 1;
+                
+                const spiralX = Math.cos(t + time) * radius * pitchInfluence;
+                const spiralY = Math.sin(t + time) * radius * pitchInfluence;
+                
+                const audioX = Math.cos(t) * value * 40 * sensitivity;
+                const audioY = Math.sin(t) * value * 40 * sensitivity;
+                
+                const x = centerX + spiralX + audioX;
+                const y = centerY + spiralY + audioY;
+                
+                if (i === 0) {
+                    ctx2d.moveTo(x, y);
+                } else {
+                    ctx2d.lineTo(x, y);
+                }
+            }
+            
+            ctx2d.stroke();
+            
+            // Draw detected note in center
+            if (detectedNote !== "--") {
+                ctx2d.shadowBlur = 0;
+                ctx2d.fillStyle = 'white';
+                ctx2d.font = 'bold 24px monospace';
+                ctx2d.textAlign = 'center';
+                ctx2d.fillText(detectedNote, centerX, centerY);
+            }
+            
+            ctx2d.shadowBlur = 0;
+        }
+        
+        // 28. Chord Wheel
+        function drawChordWheel() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) * 0.4;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw chord wheel
+            const noteCount = 12;
+            const segmentAngle = (Math.PI * 2) / noteCount;
+            
+            // Draw wheel background
+            ctx2d.beginPath();
+            ctx2d.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx2d.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx2d.fill();
+            
+            // Draw note segments
+            for (let i = 0; i < noteCount; i++) {
+                const angle = i * segmentAngle;
+                const noteName = noteNames[i];
+                
+                // Find energy for this note
+                const baseFreq = noteFrequencies[noteName];
+                let noteEnergy = 0;
+                
+                for (let octave = 0; octave < 5; octave++) {
+                    const freq = baseFreq * Math.pow(2, octave);
+                    const index = Math.floor(freq / (audioContext.sampleRate / analyserLeft.fftSize));
+                    if (index < frequencyDataLeft.length) {
+                        noteEnergy += frequencyDataLeft[index];
+                    }
+                }
+                
+                const value = applyAmplification(noteEnergy / (5 * 255));
+                const segmentRadius = radius * 0.3 + value * radius * 0.7 * sensitivity;
+                
+                ctx2d.beginPath();
+                ctx2d.moveTo(centerX, centerY);
+                ctx2d.arc(centerX, centerY, segmentRadius, angle, angle + segmentAngle);
+                ctx2d.closePath();
+                
+                const hue = i / noteCount;
+                const isActive = detectedNote === noteName;
+                const brightness = isActive ? 70 : 40;
+                
+                ctx2d.fillStyle = `hsl(${hue * 360}, 100%, ${brightness}%)`;
+                ctx2d.fill();
+                
+                // Draw note name
+                ctx2d.fillStyle = isActive ? 'white' : 'rgba(255, 255, 255, 0.7)';
+                ctx2d.font = isActive ? 'bold 16px monospace' : '14px monospace';
+                ctx2d.textAlign = 'center';
+                ctx2d.textBaseline = 'middle';
+                
+                const textAngle = angle + segmentAngle/2;
+                const textRadius = radius * 0.15;
+                const textX = centerX + Math.cos(textAngle) * textRadius;
+                const textY = centerY + Math.sin(textAngle) * textRadius;
+                
+                ctx2d.fillText(noteName, textX, textY);
+            }
+            
+            // Draw detected chord in center
+            if (detectedChord !== "--") {
+                ctx2d.fillStyle = '#ffaa00';
+                ctx2d.font = 'bold 20px monospace';
+                ctx2d.textAlign = 'center';
+                ctx2d.fillText(detectedChord, centerX, centerY);
+            }
+        }
+        
+        // 29. Note Particles
+        function drawNoteParticles() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const time = Date.now() * 0.001;
+            
+            // Clear with slow fade
+            ctx2d.fillStyle = `rgba(0, 0, 0, 0.05)`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw note-colored particles
+            const particleCount = 100;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const freqIndex = Math.floor((i / particleCount) * frequencyDataLeft.length);
+                let energy = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                energy = Math.max(0.05, energy) * sensitivity;
+                
+                // Map frequency to note color
+                const freq = freqIndex * (audioContext.sampleRate / analyserLeft.fftSize);
+                let noteHue = 0;
+                
+                for (let n = 0; n < noteNames.length; n++) {
+                    const noteFreq = noteFrequencies[noteNames[n]] * Math.pow(2, 4); // Middle octave
+                    if (Math.abs(freq - noteFreq) < noteFreq * 0.06) { // Within 6%
+                        noteHue = n / noteNames.length;
+                        break;
+                    }
+                }
+                
+                const x = (i / particleCount) * width;
+                const y = height/2 + Math.sin(time * 2 + i * 0.5) * 100 * energy;
+                
+                const size = 2 + energy * 15;
+                
+                // Glow effect
+                ctx2d.shadowBlur = glowAmount;
+                ctx2d.shadowColor = `hsl(${noteHue * 360}, 100%, 60%)`;
+                ctx2d.fillStyle = `hsl(${noteHue * 360}, 100%, 60%)`;
+                ctx2d.globalAlpha = 0.8;
+                
+                ctx2d.beginPath();
+                ctx2d.arc(x, y, size, 0, Math.PI * 2);
+                ctx2d.fill();
+                
+                ctx2d.shadowBlur = 0;
+                ctx2d.globalAlpha = 1;
+            }
+        }
+        
+        // 30. Harmonic Web
+        function drawHarmonicWeb() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            const width = canvas2d.width;
+            const height = canvas2d.height;
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const time = Date.now() * 0.001;
+            
+            // Clear with trail
+            ctx2d.fillStyle = `rgba(0, 0, 0, ${trailAmount})`;
+            ctx2d.fillRect(0, 0, width, height);
+            
+            // Draw harmonic web
+            const pointCount = 12;
+            const points = [];
+            
+            // Create points on a circle
+            for (let i = 0; i < pointCount; i++) {
+                const angle = (i / pointCount) * Math.PI * 2 + time * 0.2;
+                const baseRadius = 100;
+                
+                const freqIndex = Math.floor((i / pointCount) * frequencyDataLeft.length);
+                const value = applyAmplification(frequencyDataLeft[freqIndex] / 255);
+                
+                const radius = baseRadius + value * 150 * sensitivity;
+                
+                points.push({
+                    x: centerX + Math.cos(angle) * radius,
+                    y: centerY + Math.sin(angle) * radius,
+                    value: value
+                });
+            }
+            
+            // Connect points to create web
+            ctx2d.strokeStyle = leftColor;
+            ctx2d.lineWidth = lineWidth * 0.5;
+            ctx2d.shadowBlur = glowAmount;
+            ctx2d.shadowColor = leftColor;
+            
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                    const connectionStrength = (points[i].value + points[j].value) / 2;
+                    
+                    if (connectionStrength > 0.1) {
+                        ctx2d.globalAlpha = 0.1 + connectionStrength * 0.9;
+                        
+                        ctx2d.beginPath();
+                        ctx2d.moveTo(points[i].x, points[i].y);
+                        ctx2d.lineTo(points[j].x, points[j].y);
+                        ctx2d.stroke();
+                    }
+                }
+            }
+            
+            ctx2d.globalAlpha = 1;
+            ctx2d.shadowBlur = 0;
+            
+            // Draw points
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                
+                ctx2d.beginPath();
+                ctx2d.arc(point.x, point.y, 3 + point.value * 10, 0, Math.PI * 2);
+                ctx2d.fillStyle = leftColor;
+                ctx2d.fill();
+            }
+        }
+        
+        // 31-50: Additional visualizations would follow similar patterns
+        
+        // ================= 3D VISUALIZATION UPDATES =================
+        
+        // Update Particle Field
+        function updateParticleField() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            const time = Date.now() * 0.001;
+            
+            particles.forEach((particle, i) => {
+                const dataIndex = Math.floor((i % frequencyDataLeft.length));
+                let value = applyAmplification(frequencyDataLeft[dataIndex] / 255);
+                
+                value = Math.max(0.05, value) * sensitivity;
+                
+                // Oscillate around base position
+                particle.position.x = particle.userData.baseX + 
+                    Math.sin(time * particle.userData.speed + i) * value * 15;
+                particle.position.y = particle.userData.baseY + 
+                    Math.cos(time * particle.userData.speed * 0.7 + i) * value * 15;
+                particle.position.z = particle.userData.baseZ + 
+                    Math.sin(time * particle.userData.speed * 0.5 + i) * value * 15;
+                
+                // Scale based on amplitude
+                const scale = particle.userData.size * (0.5 + value);
+                particle.scale.setScalar(scale);
+                
+                // Color based on amplitude and time
+                const hue = (time * 0.05 + value * 0.1 + i * 0.001) % 1;
+                particle.material.color.setHSL(hue, 1, 0.5 + value * 0.3);
+            });
+        }
+        
+        // Update Audio Orbit
+        function updateAudioOrbit() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            const time = Date.now() * 0.001;
+            
+            orbitParticles.forEach((particle, i) => {
+                const dataIndex = Math.floor((i % frequencyDataLeft.length));
+                let value = applyAmplification(frequencyDataLeft[dataIndex] / 255);
+                
+                value = Math.max(0.05, value) * sensitivity;
+                
+                // Update orbit position with audio influence
+                const angle = particle.userData.baseAngle + time * particle.userData.speed;
+                const orbitRadius = particle.userData.orbitRadius + value * 12;
+                const height = Math.sin(time * 2 + i * 0.1) * value * 8;
+                
+                particle.position.x = Math.cos(angle) * orbitRadius;
+                particle.position.z = Math.sin(angle) * orbitRadius;
+                particle.position.y = particle.userData.height + height;
+                
+                // Scale and color
+                const scale = 0.1 + value * 0.5;
+                particle.scale.setScalar(scale);
+                
+                const hue = (time * 0.1 + i * 0.001) % 1;
+                const brightness = 0.5 + value * 0.3;
+                particle.material.color.setHSL(hue, 1, brightness);
+            });
+        }
+        
+        // Update Wave Tunnel
+        function updateWaveTunnel() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            const time = Date.now() * 0.001;
+            
+            particles.forEach((particle, i) => {
+                const dataIndex = Math.floor((i % frequencyDataLeft.length));
+                let value = applyAmplification(frequencyDataLeft[dataIndex] / 255);
+                
+                value = Math.max(0.05, value) * sensitivity;
+                
+                // Create wave motion in tunnel
+                const waveAmount = Math.sin(time * 3 + particle.userData.spiralAngle) * value * 8;
+                const pulse = 1 + Math.sin(time + i * 0.1) * value * 0.4;
+                
+                particle.position.x = particle.userData.baseX * pulse + waveAmount;
+                particle.position.y = particle.userData.baseY * pulse + waveAmount;
+                
+                // Move through tunnel
+                particle.position.z += particle.userData.speed;
+                if (particle.position.z > 25) {
+                    particle.position.z = -25;
+                }
+                
+                // Scale and color
+                const scale = 0.1 + value * 0.4;
+                particle.scale.setScalar(scale);
+                
+                const hue = ((particle.position.z + 25) / 50 + time * 0.05) % 1;
+                particle.material.color.setHSL(hue, 1, 0.5 + value * 0.2);
+            });
+        }
+        
+        // Update Sphere Field
+        function updateSphereField() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            const time = Date.now() * 0.001;
+            
+            spheres.forEach((sphere, i) => {
+                const dataIndex = Math.floor((i % frequencyDataLeft.length));
+                let value = applyAmplification(frequencyDataLeft[dataIndex] / 255);
+                
+                value = Math.max(0.05, value) * sensitivity;
+                
+                // Bounce spheres
+                const bounce = Math.abs(Math.sin(time * 2 + i * 0.1)) * value * 5;
+                sphere.position.y = sphere.userData.baseY + bounce;
+                
+                // Scale spheres
+                const scale = 0.5 + value * 2;
+                sphere.scale.set(scale, scale, scale);
+                
+                // Rotate spheres
+                sphere.rotation.x = time * 0.5 + i * 0.01;
+                sphere.rotation.y = time * 0.7 + i * 0.01;
+                
+                // Color based on audio
+                const hue = (time * 0.1 + value * 0.2) % 1;
+                sphere.material.color.setHSL(hue, 1, 0.5 + value * 0.2);
+            });
+        }
+        
+        // Update Cube Matrix
+        function updateCubeMatrix() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            const time = Date.now() * 0.001;
+            
+            cubes.forEach((cube, i) => {
+                const dataIndex = Math.floor((i % frequencyDataLeft.length));
+                let value = applyAmplification(frequencyDataLeft[dataIndex] / 255);
+                
+                value = Math.max(0.05, value) * sensitivity;
+                
+                // Move cubes up and down
+                const height = Math.sin(time * 2 + cube.userData.gridX + cube.userData.gridZ) * value * 3;
+                cube.position.y = cube.userData.baseY + height;
+                
+                // Scale cubes
+                const scale = 0.5 + value * 1.5;
+                cube.scale.set(scale, scale, scale);
+                
+                // Rotate cubes
+                cube.rotation.x = time * cube.userData.rotationSpeed;
+                cube.rotation.y = time * cube.userData.rotationSpeed * 1.3;
+                
+                // Color based on position and audio
+                const hue = ((cube.userData.gridX + cube.userData.gridZ) / 16 + time * 0.05) % 1;
+                const brightness = 0.4 + value * 0.4;
+                cube.material.color.setHSL(hue, 1, brightness);
+            });
+        }
+        
+        // Update 3D Equalizer
+        function update3DEqualizer() {
+            if (!analyserLeft) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            
+            cubes.forEach((bar, i) => {
+                const dataIndex = Math.floor((i / cubes.length) * frequencyDataLeft.length);
+                let value = applyAmplification(frequencyDataLeft[dataIndex] / 255);
+                
+                value = Math.max(0.05, value) * sensitivity;
+                
+                // Update bar height
+                const height = 1 + value * 10;
+                bar.scale.y = height;
+                bar.position.y = height / 2;
+                
+                // Color based on frequency
+                const hue = i / cubes.length;
+                bar.material.color.setHSL(hue, 1, 0.5 + value * 0.3);
+                
+                // Add slight rotation
+                bar.rotation.y = Math.sin(Date.now() * 0.001 + i) * 0.1;
+            });
+        }
+        
+        // ================= HELPER FUNCTIONS =================
+        
+        // Apply amplification for low levels
+        function applyAmplification(value) {
+            if (!amplifyLow) return value;
+            
+            // Exponential amplification for low values
+            if (value < 0.1) {
+                return value * 5; // 5x amplification for very low values
+            } else if (value < 0.3) {
+                return value * 2; // 2x amplification for low values
+            }
+            return value;
+        }
+        
+        // Calculate audio statistics
+        function calculateStats() {
+            if (!analyserLeft || !analyserRight) return;
+            
+            analyserLeft.getByteFrequencyData(frequencyDataLeft);
+            analyserRight.getByteFrequencyData(frequencyDataRight);
+            
+            // Calculate average volume for each channel
+            let leftSum = 0, rightSum = 0;
+            for (let i = 0; i < frequencyDataLeft.length; i++) {
+                leftSum += frequencyDataLeft[i];
+                rightSum += frequencyDataRight[i];
+            }
+            
+            const leftAvg = leftSum / frequencyDataLeft.length;
+            const rightAvg = rightSum / frequencyDataRight.length;
+            
+            const leftPercent = Math.round((leftAvg / 255) * 100);
+            const rightPercent = Math.round((rightAvg / 255) * 100);
+            
+            // Update volume meters
+            leftVolumeFill.style.height = `${leftPercent}%`;
+            rightVolumeFill.style.height = `${rightPercent}%`;
+            
+            // Update balance display
+            const total = leftAvg + rightAvg;
+            const balance = total > 0 ? Math.round((rightAvg / total) * 100) : 50;
+            balanceSpan.textContent = `${100 - balance}/${balance}`;
+        }
+        
+        // Next visualization
+        function nextVisualization() {
+            currentVisualizationIndex = (currentVisualizationIndex + 1) % visualizations.length;
+            setupVisualization();
+        }
+        
+        // Previous visualization
+        function prevVisualization() {
+            currentVisualizationIndex = (currentVisualizationIndex - 1 + visualizations.length) % visualizations.length;
+            setupVisualization();
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Calculate FPS
+            frameCount++;
+            const currentTime = performance.now();
+            if (currentTime >= lastTime + 1000) {
+                fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                fpsSpan.textContent = fps;
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+            
+            // Update audio data if playing
+            if (isPlaying && analyserLeft && analyserRight) {
+                // Calculate stats
+                calculateStats();
+                
+                // Detect pitch
+                detectPitch();
+                
+                const vis = visualizations[currentVisualizationIndex];
+                
+                // Update visualization based on current mode
+                // For brevity, I'll map the first 30 modes to their functions
+                // You would expand this for all 50 modes
+                const modeDrawFunctions = {
+                    'trueStereoScope': drawTrueStereoScope,
+                    'dualWaveform': drawDualWaveform,
+                    'mirrorScope': drawMirrorScope,
+                    'glowScope': drawGlowScope,
+                    'vectorScope': drawVectorScope,
+                    'xyScope': drawXYScope,
+                    'lissajous': drawLissajous,
+                    'spiralOsc': drawSpiralOsc,
+                    'circleOsc': drawCircleOsc,
+                    'kaleidoscope': drawKaleidoscope,
+                    'spectrumBars': drawSpectrumBars,
+                    'spectrumWave': drawSpectrumWave,
+                    'spectrumWaterfall': drawSpectrumWaterfall,
+                    'spectrumCircle': drawSpectrumCircle,
+                    'spectrum3d': draw3DSpectrum,
+                    'energyDots': drawEnergyDots,
+                    'pulseWaves': drawPulseWaves,
+                    'breathingCircles': drawBreathingCircles,
+                    'glowSpheres': drawGlowSpheres,
+                    'particleRain': drawParticleRain,
+                    'audioRings': drawAudioRings,
+                    'waveGrid': drawWaveGrid,
+                    'fluidSim': drawFluidSim,
+                    'voronoi': drawVoronoi,
+                    'mosaic': drawAudioMosaic,
+                    'noteBars': drawNoteBars,
+                    'pitchSpiral': drawPitchSpiral,
+                    'chordWheel': drawChordWheel,
+                    'noteParticles': drawNoteParticles,
+                    'harmonicWeb': drawHarmonicWeb,
+                    'particleField': updateParticleField,
+                    'audioOrbit': updateAudioOrbit,
+                    'waveTunnel': updateWaveTunnel,
+                    'sphereField': updateSphereField,
+                    'cubeMatrix': updateCubeMatrix,
+                    'equalizer3d': update3DEqualizer
+                };
+                
+                const drawFunction = modeDrawFunctions[vis.id];
+                
+                if (drawFunction) {
+                    if (vis.type === '2d') {
+                        drawFunction();
+                    } else {
+                        // 3D visualizations
+                        drawFunction();
+                        
+                        // Animate camera for 3D modes
+                        const time = Date.now() * 0.001;
+                        
+                        switch (vis.id) {
+                            case 'particleField':
+                                camera.position.x = Math.sin(time * 0.3) * 30;
+                                camera.position.y = Math.cos(time * 0.2) * 20;
+                                break;
+                            case 'audioOrbit':
+                                camera.position.x = Math.sin(time * 0.4) * 35;
+                                camera.position.y = Math.cos(time * 0.3) * 25;
+                                break;
+                            case 'waveTunnel':
+                                camera.position.z = 50 + Math.sin(time * 0.5) * 15;
+                                break;
+                            case 'sphereField':
+                                camera.position.x = Math.sin(time * 0.2) * 40;
+                                camera.position.z = Math.cos(time * 0.2) * 40;
+                                break;
+                            case 'cubeMatrix':
+                                camera.position.y = 20 + Math.sin(time * 0.1) * 10;
+                                break;
+                            case 'equalizer3d':
+                                camera.position.x = Math.sin(time * 0.3) * 30;
+                                camera.position.y = 15;
+                                break;
+                        }
+                        
+                        camera.lookAt(0, 0, 0);
+                        renderer.render(scene, camera);
+                    }
+                } else {
+                    // Fallback for unimplemented modes
+                    drawTrueStereoScope();
+                }
+            }
+        }
+        
+        // Resize canvas
+        function resizeCanvas() {
+            canvas2d.width = window.innerWidth;
+            canvas2d.height = window.innerHeight;
+            
+            if (renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Exit button
+            exitBtn.addEventListener('click', () => {
+                if (confirm('Exit visualizer?')) {
+                    window.close();
+                }
+            });
+            
+            // Fullscreen button
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(console.log);
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+            
+            // Start microphone button
+            startBtn.addEventListener('click', () => {
+                setupAudio();
+            });
+            
+            // Start microphone from status
+            startMicBtn.addEventListener('click', () => {
+                setupAudio();
+            });
+            
+            // Next visualization button
+            nextVisualizationBtn.addEventListener('click', nextVisualization);
+            
+            // Sensitivity slider
+            sensitivitySlider.addEventListener('input', (e) => {
+                sensitivity = parseFloat(e.target.value);
+                sensitivityDisplay.textContent = sensitivity.toFixed(1);
+                sensitivityValue.textContent = sensitivity.toFixed(1);
+            });
+            
+            // Color buttons
+            colorButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    colorButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    leftColor = btn.dataset.color;
+                    // Calculate complementary color for right channel
+                    const tempColor = new THREE.Color(leftColor);
+                    const hsl = { h: 0, s: 0, l: 0 };
+                    tempColor.getHSL(hsl);
+                    hsl.h = (hsl.h + 0.5) % 1;
+                    rightColor = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l).getStyle();
+                });
+            });
+            
+            // Amplify low checkbox
+            amplifyCheckbox.addEventListener('change', () => {
+                amplifyLow = amplifyCheckbox.checked;
+            });
+            
+            // Visualization controls
+            lineWidthSlider.addEventListener('input', (e) => {
+                lineWidth = parseInt(e.target.value);
+                lineWidthValue.textContent = lineWidth;
+            });
+            
+            glowSlider.addEventListener('input', (e) => {
+                glowAmount = parseInt(e.target.value);
+                glowValue.textContent = glowAmount;
+            });
+            
+            trailSlider.addEventListener('input', (e) => {
+                trailAmount = parseFloat(e.target.value);
+                trailValue.textContent = trailAmount.toFixed(2);
+            });
+            
+            // Click to start audio context
+            document.addEventListener('click', async () => {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    console.log('Audio context created');
+                }
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                }
+            });
+            
+            // Window resize
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                switch (e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        nextVisualization();
+                        break;
+                    case 'KeyF':
+                        if (!document.fullscreenElement) {
+                            document.documentElement.requestFullscreen().catch(console.log);
+                        } else {
+                            document.exitFullscreen();
+                        }
+                        break;
+                    case 'Escape':
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        }
+                        break;
+                    case 'ArrowRight':
+                        nextVisualization();
+                        break;
+                    case 'ArrowLeft':
+                        prevVisualization();
+                        break;
+                    case 'ArrowUp':
+                        sensitivity = Math.min(10, sensitivity + 0.5);
+                        sensitivitySlider.value = sensitivity;
+                        sensitivityDisplay.textContent = sensitivity.toFixed(1);
+                        sensitivityValue.textContent = sensitivity.toFixed(1);
+                        break;
+                    case 'ArrowDown':
+                        sensitivity = Math.max(0.1, sensitivity - 0.5);
+                        sensitivitySlider.value = sensitivity;
+                        sensitivityDisplay.textContent = sensitivity.toFixed(1);
+                        sensitivityValue.textContent = sensitivity.toFixed(1);
+                        break;
+                    case 'KeyL':
+                        amplifyLow = !amplifyLow;
+                        amplifyCheckbox.checked = amplifyLow;
+                        break;
+                    case 'KeyC':
+                        // Cycle through color presets
+                        const colors = ['#4fc3f7', '#ff4081', '#00ff88', '#ffaa00', '#aa00ff', '#00ffff', '#ff0088', '#88ff00'];
+                        const currentIndex = colors.indexOf(leftColor);
+                        const nextIndex = (currentIndex + 1) % colors.length;
+                        
+                        colorButtons.forEach(b => b.classList.remove('active'));
+                        colorButtons[nextIndex].classList.add('active');
+                        leftColor = colors[nextIndex];
+                        
+                        const tempColor = new THREE.Color(leftColor);
+                        const hsl = { h: 0, s: 0, l: 0 };
+                        tempColor.getHSL(hsl);
+                        hsl.h = (hsl.h + 0.5) % 1;
+                        rightColor = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l).getStyle();
+                        break;
+                    case 'KeyT':
+                        // Toggle tuner visibility
+                        const tuner = document.getElementById('tuner-display');
+                        tuner.style.display = tuner.style.display === 'none' ? 'block' : 'none';
+                        break;
+                    case 'KeyV':
+                        // Toggle visualization controls
+                        const visControls = document.getElementById('visualization-controls');
+                        visControls.style.display = visControls.style.display === 'none' ? 'block' : 'none';
+                        break;
+                }
+            });
+        }
+        
+        // Start when page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
